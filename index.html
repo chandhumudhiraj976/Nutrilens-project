@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NutriLens – SnackSwap Showdown 🥗</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── Reset ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#07090f;color:#f1f5f9;min-height:100vh;overflow-x:hidden;line-height:1.6;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(0,212,170,.07) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 40% at 80% 90%,rgba(245,158,11,.05) 0%,transparent 60%);
+  pointer-events:none;z-index:0;}
+:root{
+  --accent:#00d4aa;--accent-dark:#00a885;--amber:#f59e0b;
+  --danger:#ef4444;--warning:#f97316;
+  --bg-card:rgba(255,255,255,.04);--bg-card-h:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.08);--border-h:rgba(0,212,170,.4);
+  --text2:#94a3b8;--text3:#475569;
+  --r:12px;--r2:20px;--r3:28px;
+  --sha:0 4px 24px rgba(0,0,0,.5);--sha2:0 8px 48px rgba(0,0,0,.6);
+}
+
+/* ── Navbar ── */
+.navbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;
+  justify-content:space-between;padding:0 2rem;height:64px;
+  background:rgba(7,9,15,.9);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);}
+.navbar-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;}
+.navbar-logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),#0070f3);
+  border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.navbar-title{font-size:1.2rem;font-weight:800;
+  background:linear-gradient(90deg,var(--accent),#60a5fa);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.navbar-subtitle{font-size:.7rem;color:var(--text2);}
+.nav-links{display:flex;gap:.5rem;}
+.nav-btn{background:transparent;border:1px solid transparent;color:var(--text2);
+  padding:.4rem .9rem;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:500;
+  transition:all .2s;}
+.nav-btn:hover{background:var(--bg-card-h);color:#f1f5f9;border-color:var(--border);}
+.nav-btn.active{background:rgba(0,212,170,.12);color:var(--accent);border-color:rgba(0,212,170,.3);}
+
+/* ── Pages ── */
+.app-container{position:relative;z-index:1;}
+.page{display:none;padding:2rem;max-width:1200px;margin:0 auto;}
+.page.active{display:block;}
+
+/* ── Hero ── */
+.hero{text-align:center;padding:3rem 1rem 2rem;}
+.hero h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:900;margin-bottom:1rem;
+  background:linear-gradient(135deg,var(--accent) 0%,#60a5fa 50%,#a78bfa 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero p{color:var(--text2);font-size:1.1rem;max-width:600px;margin:0 auto 2rem;}
+
+/* ── Search bar ── */
+.search-box{position:relative;max-width:600px;margin:0 auto 1.5rem;}
+.search-box input{width:100%;padding:.85rem 1rem .85rem 3rem;background:var(--bg-card);
+  border:1px solid var(--border);border-radius:var(--r2);color:#f1f5f9;font-size:1rem;
+  outline:none;transition:border .2s;}
+.search-box input:focus{border-color:var(--accent);}
+.search-box .icon{position:absolute;left:1rem;top:50%;transform:translateY(-50%);font-size:1.1rem;}
+.search-box input::placeholder{color:var(--text3);}
+
+/* ── Filter pills ── */
+.filter-pills{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:2rem;}
+.pill{padding:.35rem .9rem;border-radius:999px;border:1px solid var(--border);
+  background:var(--bg-card);color:var(--text2);cursor:pointer;font-size:.82rem;
+  font-weight:500;transition:all .2s;}
+.pill:hover{border-color:var(--accent);color:var(--accent);}
+.pill.active{background:rgba(0,212,170,.15);color:var(--accent);border-color:var(--accent);}
+
+/* ── Stats bar ── */
+.stats-bar{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem;}
+.stat-chip{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);
+  padding:.5rem 1.2rem;text-align:center;}
+.stat-chip .num{font-size:1.3rem;font-weight:800;color:var(--accent);}
+.stat-chip .lbl{font-size:.72rem;color:var(--text2);}
+
+/* ── Snack grid ── */
+.snack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.2rem;}
+
+/* ── Snack card ── */
+.snack-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:1.4rem;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;}
+.snack-card::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 20%,rgba(0,212,170,.05),transparent 60%);
+  opacity:0;transition:opacity .3s;}
+.snack-card:hover{transform:translateY(-4px);border-color:var(--border-h);
+  box-shadow:0 8px 32px rgba(0,212,170,.12);}
+.snack-card:hover::before{opacity:1;}
+.card-emoji{font-size:2.5rem;margin-bottom:.7rem;}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;}
+.card-name{font-size:1rem;font-weight:700;line-height:1.3;flex:1;}
+.grade-badge{display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:8px;font-weight:900;font-size:.95rem;flex-shrink:0;}
+.grade-A{background:rgba(16,185,129,.2);color:#10b981;}
+.grade-B{background:rgba(132,204,22,.2);color:#84cc16;}
+.grade-C{background:rgba(245,158,11,.2);color:#f59e0b;}
+.grade-D{background:rgba(249,115,22,.2);color:#f97316;}
+.grade-E{background:rgba(239,68,68,.2);color:#ef4444;}
+.card-brand{font-size:.78rem;color:var(--text2);margin:.3rem 0 .6rem;}
+.card-macros{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem;}
+.macro-tag{background:rgba(255,255,255,.06);border-radius:6px;padding:.2rem .5rem;
+  font-size:.74rem;color:var(--text2);}
+.macro-tag span{color:#f1f5f9;font-weight:600;}
+.card-desc{font-size:.8rem;color:var(--text3);margin-bottom:1rem;line-height:1.5;}
+.card-actions{display:flex;gap:.5rem;}
+.btn{padding:.45rem .9rem;border-radius:8px;border:none;cursor:pointer;
+  font-size:.82rem;font-weight:600;transition:all .2s;}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#0070f3);color:#fff;}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px);}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;}
+.btn-danger:hover{background:rgba(239,68,68,.25);}
+.btn-success{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#10b981;}
+.btn-success:hover{background:rgba(16,185,129,.25);}
+.junk-badge{position:absolute;top:.8rem;right:.8rem;background:rgba(239,68,68,.15);
+  color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;
+  font-size:.68rem;padding:.15rem .4rem;font-weight:600;}
+.healthy-badge{position:absolute;top:.8rem;right:.8rem;background:rgba(16,185,129,.15);
+  color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:6px;
+  font-size:.68rem;padding:.15rem .4rem;font-weight:600;}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;
+  display:flex;align-items:center;justify-content:center;padding:1rem;
+  opacity:0;pointer-events:none;transition:opacity .3s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:#0d1117;border:1px solid var(--border);border-radius:var(--r3);
+  width:100%;max-width:700px;max-height:90vh;overflow-y:auto;
+  transform:scale(.95);transition:transform .3s;}
+.modal-overlay.open .modal{transform:scale(1);}
+.modal-header{padding:1.5rem 1.5rem 1rem;display:flex;align-items:center;
+  justify-content:space-between;border-bottom:1px solid var(--border);}
+.modal-title{font-size:1.3rem;font-weight:800;}
+.modal-close{background:var(--bg-card);border:1px solid var(--border);color:var(--text2);
+  width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1rem;}
+.modal-close:hover{color:#f1f5f9;}
+.modal-body{padding:1.5rem;}
+.modal-tabs{display:flex;gap:.4rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:.8rem;}
+.modal-tab{background:transparent;border:none;color:var(--text2);padding:.4rem .8rem;
+  border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:500;transition:all .2s;}
+.modal-tab.active{background:rgba(0,212,170,.12);color:var(--accent);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* ── Nutrition grid ── */
+.nut-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.8rem;margin-bottom:1.5rem;}
+.nut-cell{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);
+  padding:.8rem;text-align:center;}
+.nut-val{font-size:1.3rem;font-weight:800;color:var(--accent);}
+.nut-unit{font-size:.7rem;color:var(--text2);}
+.nut-label{font-size:.78rem;color:var(--text2);margin-top:.2rem;}
+
+/* ── Compare panel ── */
+.compare-row{display:grid;grid-template-columns:1fr auto 1fr;gap:.8rem;align-items:center;
+  padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.compare-row:last-child{border-bottom:none;}
+.cmp-left,.cmp-right{font-size:.9rem;font-weight:600;}
+.cmp-left{text-align:right;color:#ef4444;}
+.cmp-right{color:#10b981;}
+.cmp-label{font-size:.78rem;color:var(--text3);text-align:center;}
+.savings-banner{background:linear-gradient(135deg,rgba(0,212,170,.12),rgba(96,165,250,.08));
+  border:1px solid rgba(0,212,170,.25);border-radius:var(--r2);padding:1.2rem;
+  margin-bottom:1.2rem;text-align:center;}
+.savings-banner h3{color:var(--accent);font-size:1.1rem;margin-bottom:.5rem;}
+.savings-tags{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;}
+.stag{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);
+  color:#10b981;border-radius:999px;padding:.3rem .7rem;font-size:.8rem;font-weight:600;}
+.stag.red{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.2);color:#ef4444;}
+
+/* ── Exercise cards ── */
+.ex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.8rem;}
+.ex-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);
+  padding:1rem;text-align:center;}
+.ex-emoji{font-size:1.8rem;margin-bottom:.4rem;}
+.ex-time{font-size:1.4rem;font-weight:800;color:var(--amber);}
+.ex-name{font-size:.78rem;color:var(--text2);}
+
+/* ── Swap cards ── */
+.swap-grid{display:grid;gap:.8rem;}
+.swap-card{background:var(--bg-card);border:1px solid rgba(0,212,170,.2);
+  border-radius:var(--r2);padding:1.2rem;display:flex;gap:1rem;align-items:center;}
+.swap-emoji{font-size:2rem;flex-shrink:0;}
+.swap-info{flex:1;}
+.swap-name{font-weight:700;margin-bottom:.3rem;}
+.swap-cal{font-size:.82rem;color:var(--text2);}
+.swap-action-btn{background:rgba(0,212,170,.15);border:1px solid rgba(0,212,170,.3);
+  color:var(--accent);border-radius:8px;padding:.4rem .8rem;cursor:pointer;
+  font-size:.8rem;font-weight:600;white-space:nowrap;transition:all .2s;}
+.swap-action-btn:hover{background:rgba(0,212,170,.25);}
+
+/* ── Tracker page ── */
+.tracker-header{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;margin-bottom:2rem;}
+.tracker-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:1.3rem;text-align:center;}
+.tracker-card .big{font-size:2rem;font-weight:900;color:var(--accent);}
+.tracker-card .lbl{font-size:.8rem;color:var(--text2);margin-top:.3rem;}
+.tracker-card.green .big{color:#10b981;}
+.tracker-card.amber .big{color:var(--amber);}
+.tracker-card.red .big{color:#ef4444;}
+
+.log-entry{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);
+  padding:1rem;display:flex;gap:1rem;align-items:center;margin-bottom:.6rem;}
+.log-arrow{font-size:1.5rem;}
+.log-info{flex:1;}
+.log-names{font-size:.9rem;font-weight:600;}
+.log-meta{font-size:.78rem;color:var(--text2);}
+.log-kcal{color:var(--accent);font-weight:700;}
+.log-del{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:.9rem;}
+.log-del:hover{color:#ef4444;}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text3);}
+.empty-state .big-icon{font-size:4rem;margin-bottom:1rem;}
+
+/* ── Hacks page ── */
+.hack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.2rem;}
+.hack-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r2);padding:1.4rem;}
+.hack-top{display:flex;align-items:center;gap:.8rem;margin-bottom:.8rem;}
+.hack-emoji{font-size:2rem;}
+.hack-meta{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem;}
+.hack-tag{background:rgba(255,255,255,.06);border-radius:6px;padding:.2rem .5rem;font-size:.74rem;color:var(--text2);}
+.hack-ing{font-size:.8rem;color:var(--text2);margin-top:.8rem;}
+.hack-ing ul{padding-left:1.2rem;margin-top:.3rem;}
+.hack-ing li{margin-bottom:.2rem;}
+
+/* ── Sugar page ── */
+.sugar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.2rem;margin-top:1.5rem;}
+.sugar-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r2);padding:1.4rem;}
+.sugar-top{display:flex;align-items:center;gap:1rem;margin-bottom:1rem;}
+.sugar-info-text{font-size:.85rem;color:var(--text2);margin-bottom:.8rem;}
+.sugar-cubes{display:flex;flex-wrap:wrap;gap:4px;margin-top:.5rem;}
+.scube{font-size:1rem;}
+
+/* ── Section heading ── */
+.section-head{margin-bottom:1.5rem;}
+.section-head h2{font-size:1.5rem;font-weight:800;margin-bottom:.3rem;}
+.section-head p{color:var(--text2);font-size:.9rem;}
+.divider{height:1px;background:var(--border);margin:2rem 0;}
+
+/* ── Toast ── */
+.toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;display:flex;flex-direction:column;gap:.5rem;}
+.toast{background:#0d1117;border:1px solid var(--border);border-radius:var(--r);
+  padding:.8rem 1.2rem;font-size:.85rem;font-weight:500;min-width:260px;
+  transform:translateX(120%);transition:transform .3s;box-shadow:var(--sha);}
+.toast.show{transform:translateX(0);}
+.toast.success{border-color:rgba(16,185,129,.4);color:#10b981;}
+.toast.info{border-color:rgba(0,212,170,.4);color:var(--accent);}
+.toast.error{border-color:rgba(239,68,68,.4);color:#ef4444;}
+
+/* ── Misc ── */
+.chart-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:1.2rem;margin-top:1.2rem;max-height:280px;display:flex;align-items:center;justify-content:center;}
+.no-results{text-align:center;padding:3rem;color:var(--text3);}
+.type-toggle{display:flex;gap:.5rem;justify-content:center;margin-bottom:1.5rem;}
+.toggle-btn{padding:.4rem 1.2rem;border-radius:999px;border:1px solid var(--border);
+  background:transparent;color:var(--text2);cursor:pointer;font-weight:500;transition:all .2s;}
+.toggle-btn.active{background:rgba(0,212,170,.15);color:var(--accent);border-color:var(--accent);}
+hr.modal-hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
+.grade-info{display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;}
+.grade-big{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;font-size:1.4rem;font-weight:900;}
+.grade-text h3{font-size:1rem;font-weight:700;}
+.grade-text p{font-size:.82rem;color:var(--text2);}
+@media(max-width:600px){
+  .navbar{padding:0 1rem;}
+  .nav-links{gap:.25rem;}
+  .nav-btn{padding:.3rem .6rem;font-size:.78rem;}
+  .page{padding:1rem;}
+  .snack-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="app-container">
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="#" class="navbar-brand" onclick="nav('search');return false;">
+    <div class="navbar-logo">🥗</div>
+    <div>
+      <div class="navbar-title">NutriLens</div>
+      <div class="navbar-subtitle">SnackSwap Showdown</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <button class="nav-btn active" onclick="nav('search')" id="nb-search">🔍 Search</button>
+    <button class="nav-btn" onclick="nav('tracker')" id="nb-tracker">📊 Tracker</button>
+    <button class="nav-btn" onclick="nav('hacks')" id="nb-hacks">🏠 Hacks</button>
+    <button class="nav-btn" onclick="nav('sugar')" id="nb-sugar">🍬 Sugar</button>
+  </div>
+</nav>
+
+<!-- SEARCH PAGE -->
+<div class="page active" id="page-search">
+  <div class="hero">
+    <h1>🥗 NutriLens</h1>
+    <p>Search snacks • Compare nutrition • Find healthier swaps • Track your progress</p>
+  </div>
+
+  <div class="search-box">
+    <span class="icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search snacks… e.g. Samosa, Chips, Cola" oninput="onSearch(this.value)"/>
+  </div>
+
+  <div class="filter-pills" id="filterPills"></div>
+
+  <div class="type-toggle">
+    <button class="toggle-btn active" onclick="setType('all',this)">All Snacks</button>
+    <button class="toggle-btn" onclick="setType('junk',this)">🔴 Junk</button>
+    <button class="toggle-btn" onclick="setType('healthy',this)">🟢 Healthy</button>
+  </div>
+
+  <div class="stats-bar" id="statsBar"></div>
+
+  <div class="snack-grid" id="snackGrid"></div>
+</div>
+
+<!-- TRACKER PAGE -->
+<div class="page" id="page-tracker">
+  <div class="section-head">
+    <h2>📊 My Snack Swap Tracker</h2>
+    <p>Track your cumulative calorie, sugar, and sodium savings</p>
+  </div>
+  <div class="tracker-header" id="trackerStats"></div>
+  <div class="divider"></div>
+  <div id="trackerLog"></div>
+</div>
+
+<!-- HACKS PAGE -->
+<div class="page" id="page-hacks">
+  <div class="section-head">
+    <h2>🏠 Hostel Room Snack Hacks</h2>
+    <p>Low-cost, minimal-prep healthy snacks with zero cooking equipment</p>
+  </div>
+  <div class="hack-grid" id="hacksGrid"></div>
+</div>
+
+<!-- SUGAR PAGE -->
+<div class="page" id="page-sugar">
+  <div class="section-head">
+    <h2>🍬 Sugar Cube Visualizer</h2>
+    <p>See exactly how many sugar cubes are hiding in popular snacks and drinks (1 cube = 4g sugar)</p>
+  </div>
+  <div class="sugar-grid" id="sugarGrid"></div>
+</div>
+
+</div><!-- /app-container -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnBg(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Snack Details</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchTab('nutrition',this)">📋 Nutrition</button>
+        <button class="modal-tab" onclick="switchTab('swaps',this)">🔄 Swaps</button>
+        <button class="modal-tab" onclick="switchTab('compare',this)">⚖️ Compare</button>
+        <button class="modal-tab" onclick="switchTab('exercise',this)">🏃 Exercise</button>
+      </div>
+      <div class="tab-content active" id="tab-nutrition"></div>
+      <div class="tab-content" id="tab-swaps"></div>
+      <div class="tab-content" id="tab-compare"></div>
+      <div class="tab-content" id="tab-exercise"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const SNACKS=[
+  {id:"potato-chips",name:"Potato Chips",brand:"Lays Classic",category:"chips",type:"junk",emoji:"🥔",calories:536,totalFat:35,saturatedFat:3.1,carbs:53,sugar:.5,protein:7,fiber:3.8,sodium:517,servingSize:30,texture:"crunchy",flavour:"savory-salty",description:"Deep-fried potato slices loaded with salt and refined fat.",swapsTo:["roasted-makhana","baked-soya-crisps","roasted-chana"]},
+  {id:"samosa",name:"Samosa (Fried)",brand:"Street / Restaurant",category:"fried-snacks",type:"junk",emoji:"🥟",calories:262,totalFat:15,saturatedFat:6.5,carbs:28,sugar:1.2,protein:4.5,fiber:2.1,sodium:420,servingSize:100,texture:"crunchy",flavour:"savory-spicy",description:"Deep-fried pastry stuffed with spiced potatoes and peas.",swapsTo:["baked-soya-crisps","roasted-chana","hummus-crackers"]},
+  {id:"cola",name:"Cola (Cold Drink)",brand:"Coca-Cola / Pepsi",category:"beverages",type:"junk",emoji:"🥤",calories:42,totalFat:0,saturatedFat:0,carbs:10.6,sugar:10.6,protein:0,fiber:0,sodium:10,servingSize:330,texture:"liquid",flavour:"sweet-fizzy",description:"Sugar-laden carbonated drink with zero nutritional value.",swapsTo:["coconut-water","lemon-water","buttermilk"]},
+  {id:"instant-noodles",name:"Instant Noodles",brand:"Maggi / Top Ramen",category:"noodles",type:"junk",emoji:"🍜",calories:404,totalFat:16,saturatedFat:7.4,carbs:56,sugar:2.1,protein:9,fiber:1.8,sodium:1760,servingSize:70,texture:"soft",flavour:"savory-umami",description:"Ultra-processed noodles with extremely high sodium content.",swapsTo:["oats-upma","poha","multigrain-roti"]},
+  {id:"cream-biscuits",name:"Cream Biscuits",brand:"Oreo / Bourbon",category:"biscuits",type:"junk",emoji:"🍪",calories:489,totalFat:21,saturatedFat:9.8,carbs:71,sugar:36,protein:5,fiber:1.5,sodium:390,servingSize:30,texture:"crunchy",flavour:"sweet",description:"Sugar-rich cream-filled biscuits with refined flour.",swapsTo:["rice-cakes","dark-chocolate","multigrain-crackers"]},
+  {id:"burger",name:"Veg Burger",brand:"McDonald's / BK",category:"fast-food",type:"junk",emoji:"🍔",calories:295,totalFat:13,saturatedFat:4.5,carbs:36,sugar:6,protein:9,fiber:2,sodium:580,servingSize:150,texture:"soft",flavour:"savory",description:"Refined bun with high-sodium patty and sugary sauces.",swapsTo:["hummus-crackers","oats-upma","poha"]},
+  {id:"energy-drink",name:"Energy Drink",brand:"Red Bull / Monster",category:"beverages",type:"junk",emoji:"⚡",calories:45,totalFat:0,saturatedFat:0,carbs:11,sugar:11,protein:0,fiber:0,sodium:100,servingSize:250,texture:"liquid",flavour:"sweet-fizzy",description:"High-sugar, high-caffeine drink with zero nutrients.",swapsTo:["green-tea","lemon-water","coconut-water"]},
+  {id:"pani-puri",name:"Pani Puri / Golgappa",brand:"Street Food",category:"fried-snacks",type:"junk",emoji:"🫙",calories:180,totalFat:7,saturatedFat:1.5,carbs:27,sugar:4,protein:3,fiber:1.5,sodium:450,servingSize:80,texture:"crunchy",flavour:"savory-spicy-tangy",description:"Fried hollow puris filled with spiced water — high sodium risk.",swapsTo:["roasted-chana","hummus-crackers","sprouted-moong"]},
+  {id:"chocolate-bar",name:"Milk Chocolate Bar",brand:"Dairy Milk / KitKat",category:"sweets",type:"junk",emoji:"🍫",calories:535,totalFat:30,saturatedFat:18,carbs:60,sugar:56,protein:7,fiber:1.5,sodium:79,servingSize:40,texture:"smooth",flavour:"sweet",description:"Sugar and saturated fat dense confectionery.",swapsTo:["dark-chocolate","mixed-nuts","banana"]},
+  {id:"french-fries",name:"French Fries",brand:"McDonald's / BK",category:"fried-snacks",type:"junk",emoji:"🍟",calories:312,totalFat:15,saturatedFat:2.2,carbs:41,sugar:.3,protein:3.4,fiber:2.9,sodium:400,servingSize:100,texture:"crunchy",flavour:"savory-salty",description:"Deep-fried starch with added salt and trans fats.",swapsTo:["roasted-makhana","roasted-chana","baked-soya-crisps"]},
+  {id:"nachos",name:"Nachos / Corn Chips",brand:"Doritos / Uncle Chipps",category:"chips",type:"junk",emoji:"🌽",calories:503,totalFat:26,saturatedFat:3.5,carbs:64,sugar:1.5,protein:7,fiber:4,sodium:710,servingSize:30,texture:"crunchy",flavour:"savory-spicy",description:"Corn-based fried chips with artificial flavouring and high sodium.",swapsTo:["roasted-chana","baked-soya-crisps","roasted-makhana"]},
+  {id:"cheesecake",name:"Cheesecake Slice",brand:"Bakery",category:"sweets",type:"junk",emoji:"🍰",calories:321,totalFat:23,saturatedFat:13,carbs:26,sugar:20,protein:5,fiber:.5,sodium:220,servingSize:100,texture:"smooth",flavour:"sweet",description:"High saturated fat dessert with refined sugar.",swapsTo:["greek-yogurt","dark-chocolate","mixed-nuts"]},
+  {id:"vada-pav",name:"Vada Pav",brand:"Street Food",category:"fried-snacks",type:"junk",emoji:"🫓",calories:290,totalFat:12,saturatedFat:2.8,carbs:40,sugar:3,protein:6,fiber:2.5,sodium:490,servingSize:120,texture:"soft",flavour:"savory-spicy",description:"Fried potato dumpling in white bread with chutneys.",swapsTo:["poha","oats-upma","multigrain-roti"]},
+  {id:"ice-cream",name:"Ice Cream (Cup)",brand:"Amul / Kwality Walls",category:"sweets",type:"junk",emoji:"🍦",calories:207,totalFat:11,saturatedFat:7,carbs:24,sugar:21,protein:3.5,fiber:.3,sodium:80,servingSize:100,texture:"smooth",flavour:"sweet",description:"Sugar and saturated fat dense frozen treat.",swapsTo:["greek-yogurt","banana","mixed-nuts"]},
+  {id:"bread-pakora",name:"Bread Pakora",brand:"Street / Canteen",category:"fried-snacks",type:"junk",emoji:"🍞",calories:280,totalFat:14,saturatedFat:3.2,carbs:34,sugar:2,protein:6,fiber:2,sodium:480,servingSize:100,texture:"crunchy",flavour:"savory-spicy",description:"Deep-fried white bread in gram flour batter.",swapsTo:["hummus-crackers","multigrain-crackers","sprouted-moong"]},
+  {id:"cookies",name:"Butter Cookies",brand:"Britannia / Parle",category:"biscuits",type:"junk",emoji:"🍪",calories:460,totalFat:20,saturatedFat:11,carbs:65,sugar:28,protein:6,fiber:1.2,sodium:320,servingSize:30,texture:"crunchy",flavour:"sweet",description:"Butter-rich cookies with refined flour and high sugar.",swapsTo:["rice-cakes","dark-chocolate","multigrain-crackers"]},
+  {id:"pizza",name:"Pizza Slice (Cheese)",brand:"Domino's / Pizza Hut",category:"fast-food",type:"junk",emoji:"🍕",calories:266,totalFat:10,saturatedFat:4.5,carbs:33,sugar:3.6,protein:11,fiber:2.3,sodium:598,servingSize:100,texture:"soft",flavour:"savory",description:"Refined dough with high-sodium sauce and saturated fat cheese.",swapsTo:["hummus-crackers","multigrain-roti","poha"]},
+  {id:"jalebi",name:"Jalebi",brand:"Halwai / Street",category:"sweets",type:"junk",emoji:"🍬",calories:358,totalFat:13,saturatedFat:6,carbs:57,sugar:48,protein:3,fiber:.5,sodium:15,servingSize:60,texture:"crunchy",flavour:"sweet",description:"Deep-fried fermented batter soaked in sugar syrup.",swapsTo:["dates","banana","greek-yogurt"]},
+  {id:"soft-pretzel",name:"Salted Pretzel",brand:"Bakery / Packaged",category:"chips",type:"junk",emoji:"🥨",calories:380,totalFat:4,saturatedFat:.7,carbs:79,sugar:3,protein:9,fiber:2.8,sodium:1200,servingSize:50,texture:"crunchy",flavour:"savory-salty",description:"Refined flour snack with extremely high sodium content.",swapsTo:["roasted-chana","multigrain-crackers","rice-cakes"]},
+  {id:"momos",name:"Fried Momos",brand:"Street / Canteen",category:"fried-snacks",type:"junk",emoji:"🥟",calories:220,totalFat:10,saturatedFat:2.5,carbs:27,sugar:1.5,protein:7,fiber:1.8,sodium:520,servingSize:100,texture:"soft",flavour:"savory-spicy",description:"Fried dumplings in refined flour with high-sodium filling.",swapsTo:["sprouted-moong","oats-upma","poha"]},
+  // HEALTHY
+  {id:"roasted-makhana",name:"Roasted Makhana",brand:"Fox Nuts / Lotus Seeds",category:"chips",type:"healthy",emoji:"🌾",calories:347,totalFat:.1,saturatedFat:0,carbs:76,sugar:0,protein:9.7,fiber:14.5,sodium:65,servingSize:30,texture:"crunchy",flavour:"savory-mild",description:"Low-fat, high-fiber lotus seeds rich in magnesium and phosphorus.",swapsTo:[]},
+  {id:"baked-soya-crisps",name:"Baked Soya Crisps",brand:"Sofit / Act II",category:"chips",type:"healthy",emoji:"🫘",calories:380,totalFat:8,saturatedFat:1.2,carbs:48,sugar:2.5,protein:24,fiber:8,sodium:180,servingSize:30,texture:"crunchy",flavour:"savory-salty",description:"High-protein baked soy snack — the ideal chip swap.",swapsTo:[]},
+  {id:"roasted-chana",name:"Roasted Chana",brand:"Haldiram's / Homemade",category:"chips",type:"healthy",emoji:"🫘",calories:364,totalFat:6,saturatedFat:.6,carbs:61,sugar:10,protein:19,fiber:12,sodium:24,servingSize:30,texture:"crunchy",flavour:"savory-nutty",description:"Protein and fiber powerhouse with minimal sodium.",swapsTo:[]},
+  {id:"coconut-water",name:"Tender Coconut Water",brand:"Fresh / Packaged",category:"beverages",type:"healthy",emoji:"🥥",calories:19,totalFat:.2,saturatedFat:.2,carbs:3.7,sugar:2.6,protein:.7,fiber:1,sodium:105,servingSize:240,texture:"liquid",flavour:"sweet-mild",description:"Natural electrolyte drink with zero added sugar.",swapsTo:[]},
+  {id:"lemon-water",name:"Lemon Honey Water",brand:"Homemade",category:"beverages",type:"healthy",emoji:"🍋",calories:25,totalFat:0,saturatedFat:0,carbs:7,sugar:6.5,protein:.1,fiber:.1,sodium:5,servingSize:250,texture:"liquid",flavour:"sweet-tangy",description:"Vitamin C rich hydration with natural honey.",swapsTo:[]},
+  {id:"buttermilk",name:"Spiced Buttermilk",brand:"Homemade / Amul",category:"beverages",type:"healthy",emoji:"🥛",calories:40,totalFat:1,saturatedFat:.6,carbs:4.8,sugar:4,protein:3.3,fiber:0,sodium:130,servingSize:200,texture:"liquid",flavour:"savory-tangy",description:"Probiotic-rich low-fat drink that aids digestion.",swapsTo:[]},
+  {id:"oats-upma",name:"Oats Upma",brand:"Homemade",category:"noodles",type:"healthy",emoji:"🥣",calories:160,totalFat:5,saturatedFat:1,carbs:24,sugar:1,protein:6,fiber:4,sodium:180,servingSize:150,texture:"soft",flavour:"savory-mild",description:"Whole grain oats with vegetables — low GI and high fiber.",swapsTo:[]},
+  {id:"poha",name:"Poha (Flattened Rice)",brand:"Homemade",category:"noodles",type:"healthy",emoji:"🍚",calories:180,totalFat:4,saturatedFat:.5,carbs:32,sugar:1.5,protein:4,fiber:2.5,sodium:160,servingSize:150,texture:"soft",flavour:"savory-mild",description:"Iron-rich light meal with peanuts and turmeric.",swapsTo:[]},
+  {id:"multigrain-roti",name:"Multigrain Roti",brand:"Homemade",category:"noodles",type:"healthy",emoji:"🫓",calories:220,totalFat:5,saturatedFat:1,carbs:38,sugar:1,protein:8,fiber:5,sodium:90,servingSize:100,texture:"soft",flavour:"savory-mild",description:"Whole grain flatbread rich in fiber and complex carbs.",swapsTo:[]},
+  {id:"greek-yogurt",name:"Greek Yogurt (Plain)",brand:"Epigamia / Nestle",category:"sweets",type:"healthy",emoji:"🥛",calories:59,totalFat:.4,saturatedFat:.1,carbs:3.6,sugar:3.2,protein:10,fiber:0,sodium:36,servingSize:100,texture:"smooth",flavour:"sweet-tangy",description:"High protein, probiotic-rich, low sugar dairy snack.",swapsTo:[]},
+  {id:"dark-chocolate",name:"Dark Chocolate (85%)",brand:"Amul / Lindt",category:"sweets",type:"healthy",emoji:"🍫",calories:598,totalFat:42,saturatedFat:24,carbs:46,sugar:14,protein:7.9,fiber:11,sodium:20,servingSize:20,texture:"smooth",flavour:"sweet-bitter",description:"High cacao, low sugar chocolate rich in antioxidants.",swapsTo:[]},
+  {id:"mixed-nuts",name:"Mixed Nuts (Unsalted)",brand:"Raw / Happilo",category:"sweets",type:"healthy",emoji:"🥜",calories:607,totalFat:54,saturatedFat:7,carbs:21,sugar:4,protein:20,fiber:7,sodium:10,servingSize:30,texture:"crunchy",flavour:"savory-nutty",description:"Heart-healthy fats, protein, and micronutrients in a handful.",swapsTo:[]},
+  {id:"banana",name:"Banana",brand:"Fresh Fruit",category:"sweets",type:"healthy",emoji:"🍌",calories:89,totalFat:.3,saturatedFat:.1,carbs:23,sugar:12,protein:1.1,fiber:2.6,sodium:1,servingSize:120,texture:"smooth",flavour:"sweet",description:"Natural energy boost rich in potassium and B6.",swapsTo:[]},
+  {id:"sprouted-moong",name:"Sprouted Moong Dal",brand:"Homemade",category:"fried-snacks",type:"healthy",emoji:"🌱",calories:105,totalFat:.4,saturatedFat:.1,carbs:19,sugar:2,protein:8,fiber:2.2,sodium:25,servingSize:100,texture:"crunchy",flavour:"savory-mild",description:"Live food packed with enzymes, protein, and vitamins.",swapsTo:[]},
+  {id:"hummus-crackers",name:"Hummus with Crackers",brand:"Del Monte / Homemade",category:"biscuits",type:"healthy",emoji:"🫘",calories:177,totalFat:10,saturatedFat:1.5,carbs:17,sugar:1,protein:5,fiber:4,sodium:170,servingSize:60,texture:"crunchy",flavour:"savory-nutty",description:"Chickpea dip with whole grain crackers.",swapsTo:[]},
+  {id:"multigrain-crackers",name:"Multigrain Crackers",brand:"Britannia NutriChoice",category:"biscuits",type:"healthy",emoji:"🍞",calories:410,totalFat:10,saturatedFat:1.5,carbs:68,sugar:4,protein:11,fiber:7,sodium:300,servingSize:30,texture:"crunchy",flavour:"savory-mild",description:"High-fiber whole grain crackers — far better than cream biscuits.",swapsTo:[]},
+  {id:"rice-cakes",name:"Rice Cakes (Plain)",brand:"Quaker / Thin Thin",category:"biscuits",type:"healthy",emoji:"🍘",calories:387,totalFat:2.8,saturatedFat:.5,carbs:83,sugar:.5,protein:8,fiber:2,sodium:20,servingSize:30,texture:"crunchy",flavour:"savory-mild",description:"Light, low-fat rice-based snack.",swapsTo:[]},
+  {id:"green-tea",name:"Green Tea (Unsweetened)",brand:"Tetley / Lipton",category:"beverages",type:"healthy",emoji:"🍵",calories:2,totalFat:0,saturatedFat:0,carbs:.2,sugar:0,protein:.5,fiber:0,sodium:1,servingSize:240,texture:"liquid",flavour:"mild-bitter",description:"Zero-calorie antioxidant powerhouse.",swapsTo:[]},
+  {id:"dates",name:"Dates (Medjool)",brand:"Fresh / Packaged",category:"sweets",type:"healthy",emoji:"🌴",calories:282,totalFat:.4,saturatedFat:.1,carbs:75,sugar:66,protein:2.5,fiber:8,sodium:2,servingSize:30,texture:"smooth",flavour:"sweet",description:"Natural sweetener rich in fiber, iron, and potassium.",swapsTo:[]},
+  {id:"trail-mix",name:"Trail Mix (No Added Sugar)",brand:"Happilo / Homemade",category:"chips",type:"healthy",emoji:"🥜",calories:462,totalFat:28,saturatedFat:4.5,carbs:44,sugar:20,protein:13,fiber:7,sodium:15,servingSize:40,texture:"crunchy",flavour:"sweet-nutty",description:"Nuts, seeds, and dried fruit — balanced macro snack.",swapsTo:[]}
+];
+
+const HOSTEL_HACKS=[
+  {name:"Peanut Butter Banana",emoji:"🥜🍌",prep:"No cook",time:"2 min",cost:"₹20",calories:280,description:"Slice banana, spread peanut butter. Protein + natural energy.",ingredients:["1 banana","2 tbsp peanut butter"]},
+  {name:"Sprouted Chaat",emoji:"🌱",prep:"No cook",time:"5 min",cost:"₹15",calories:120,description:"Mix sprouted moong with lemon, salt, chaat masala.",ingredients:["½ cup sprouted moong","lemon","chaat masala"]},
+  {name:"Makhana Munch",emoji:"🌾",prep:"Microwave",time:"3 min",cost:"₹25",calories:150,description:"Microwave makhana with turmeric and salt for crispy snack.",ingredients:["1 cup makhana","salt","turmeric","ghee (optional)"]},
+  {name:"Greek Yogurt Parfait",emoji:"🥛",prep:"No cook",time:"3 min",cost:"₹35",calories:160,description:"Layer yogurt with banana and roasted chana for satisfying crunch.",ingredients:["1 cup Greek yogurt","banana","roasted chana"]},
+  {name:"Oats in a Cup",emoji:"🥣",prep:"Hot water",time:"5 min",cost:"₹20",calories:180,description:"Add boiling water to oats + honey + cinnamon. Zero utensils.",ingredients:["½ cup rolled oats","honey","cinnamon","hot water"]},
+  {name:"Dates & Nuts Energy Ball",emoji:"🌴🥜",prep:"No cook",time:"5 min",cost:"₹30",calories:220,description:"Blend dates + nuts. Roll into balls. Natural candy.",ingredients:["4 dates","mixed nuts","optional cocoa powder"]}
+];
+
+// ═══════════════════════════════════════════════
+// ALGORITHMS
+// ═══════════════════════════════════════════════
+function nutriScore(s){
+  const ep=s.calories<=80?0:s.calories<=160?1:s.calories<=240?2:s.calories<=320?3:s.calories<=400?4:s.calories<=480?5:s.calories<=560?6:s.calories<=640?7:s.calories<=720?8:s.calories<=800?9:10;
+  const sfp=s.saturatedFat<=1?0:s.saturatedFat<=2?1:s.saturatedFat<=3?2:s.saturatedFat<=4?3:s.saturatedFat<=5?4:s.saturatedFat<=6?5:s.saturatedFat<=7?6:s.saturatedFat<=8?7:s.saturatedFat<=9?8:s.saturatedFat<=10?9:10;
+  const sup=s.sugar<=4.5?0:s.sugar<=9?1:s.sugar<=13.5?2:s.sugar<=18?3:s.sugar<=22.5?4:s.sugar<=27?5:s.sugar<=31?6:s.sugar<=36?7:s.sugar<=40?8:s.sugar<=45?9:10;
+  const sop=s.sodium<=90?0:s.sodium<=180?1:s.sodium<=270?2:s.sodium<=360?3:s.sodium<=450?4:s.sodium<=540?5:s.sodium<=630?6:s.sodium<=720?7:s.sodium<=810?8:s.sodium<=900?9:10;
+  const fp=s.fiber<=.9?0:s.fiber<=1.9?1:s.fiber<=2.8?2:s.fiber<=3.7?3:s.fiber<=4.7?4:5;
+  const pp=s.protein<=1.6?0:s.protein<=3.2?1:s.protein<=4.8?2:s.protein<=6.4?3:s.protein<=8?4:5;
+  const neg=ep+sfp+sup+sop;
+  const score=neg>=11&&fp<5?neg-fp:neg-fp-pp;
+  if(score<=-1)return{score,grade:'A',label:'Excellent',color:'#10b981',bg:'rgba(16,185,129,.18)'};
+  if(score<=2) return{score,grade:'B',label:'Good',    color:'#84cc16',bg:'rgba(132,204,22,.18)'};
+  if(score<=10)return{score,grade:'C',label:'Fair',    color:'#f59e0b',bg:'rgba(245,158,11,.18)'};
+  if(score<=18)return{score,grade:'D',label:'Poor',    color:'#f97316',bg:'rgba(249,115,22,.18)'};
+  return        {score,grade:'E',label:'Avoid',   color:'#ef4444',bg:'rgba(239,68,68,.18)'};
+}
+
+function getSwaps(snack){
+  if(snack.swapsTo&&snack.swapsTo.length>0){
+    return snack.swapsTo.map(id=>SNACKS.find(s=>s.id===id)).filter(Boolean);
+  }
+  const feats=['calories','totalFat','saturatedFat','sugar','protein','fiber','sodium'];
+  const mx={};feats.forEach(f=>{mx[f]=Math.max(...SNACKS.map(s=>s[f]||0))||1;});
+  const nv=s=>feats.map(f=>(s[f]||0)/mx[f]);
+  const sv=nv(snack);
+  return SNACKS.filter(s=>s.type==='healthy')
+    .map(hs=>{const hv=nv(hs);const d=Math.sqrt(sv.reduce((sum,v,i)=>sum+(v-hv[i])**2,0));return{hs,d};})
+    .sort((a,b)=>a.d-b.d).slice(0,3).map(x=>x.hs);
+}
+
+function getSavings(orig,sw){
+  const ps=(v,srv)=>Math.round((v*srv)/100);
+  return{
+    caloriesSaved:ps(orig.calories,orig.servingSize)-ps(sw.calories,sw.servingSize),
+    fatRed:+(orig.totalFat-sw.totalFat).toFixed(1),
+    satFatRed:+(orig.saturatedFat-sw.saturatedFat).toFixed(1),
+    sugarRed:+(orig.sugar-sw.sugar).toFixed(1),
+    proteinGain:+(sw.protein-orig.protein).toFixed(1),
+    fiberGain:+(sw.fiber-orig.fiber).toFixed(1),
+    sodiumRed:Math.round(orig.sodium-sw.sodium)
+  };
+}
+
+function exerciseCalc(snack){
+  const cal=Math.round((snack.calories*snack.servingSize)/100);
+  const exs=[{name:'Walking',emoji:'🚶',met:3.5},{name:'Jogging',emoji:'🏃',met:7},{name:'Cycling',emoji:'🚴',met:6},{name:'Swimming',emoji:'🏊',met:8},{name:'Jump Rope',emoji:'🪂',met:11},{name:'Yoga',emoji:'🧘',met:2.5}];
+  return exs.map(e=>({...e,minutes:Math.round((cal*60)/(e.met*65)),cal}));
+}
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let query='',filterCat='all',filterType='all',currentSnack=null,activeTab='nutrition';
+let chartInst=null;
+
+const CATEGORIES=['all','chips','fried-snacks','beverages','noodles','biscuits','sweets','fast-food'];
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function nav(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nb-'+page).classList.add('active');
+  if(page==='tracker')renderTracker();
+  if(page==='hacks')renderHacks();
+  if(page==='sugar')renderSugar();
+}
+
+// ═══════════════════════════════════════════════
+// SEARCH PAGE
+// ═══════════════════════════════════════════════
+let searchTimer=null;
+function onSearch(v){
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(()=>{query=v.toLowerCase();renderGrid();},200);
+}
+
+function setType(t,btn){
+  filterType=t;
+  document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function initFilters(){
+  const c=document.getElementById('filterPills');
+  CATEGORIES.forEach(cat=>{
+    const p=document.createElement('button');
+    p.className='pill'+(cat==='all'?' active':'');
+    p.textContent=cat==='all'?'🌐 All':catLabel(cat);
+    p.onclick=()=>{filterCat=cat;document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');renderGrid();};
+    c.appendChild(p);
+  });
+}
+
+function catLabel(c){return({chips:'🥔 Chips','fried-snacks':'🍟 Fried',beverages:'🥤 Drinks',noodles:'🍜 Noodles',biscuits:'🍪 Biscuits',sweets:'🍰 Sweets','fast-food':'🍔 Fast Food'})[c]||c;}
+
+function filtered(){
+  return SNACKS.filter(s=>{
+    if(filterCat!=='all'&&s.category!==filterCat)return false;
+    if(filterType!=='all'&&s.type!==filterType)return false;
+    if(query&&!s.name.toLowerCase().includes(query)&&!s.brand.toLowerCase().includes(query)&&!s.category.toLowerCase().includes(query))return false;
+    return true;
+  });
+}
+
+function renderStats(list){
+  const sb=document.getElementById('statsBar');
+  const junk=list.filter(s=>s.type==='junk').length;
+  const healthy=list.filter(s=>s.type==='healthy').length;
+  const avgCal=list.length?Math.round(list.reduce((s,x)=>s+x.calories,0)/list.length):0;
+  sb.innerHTML=`
+    <div class="stat-chip"><div class="num">${list.length}</div><div class="lbl">Snacks Found</div></div>
+    <div class="stat-chip"><div class="num" style="color:#ef4444">${junk}</div><div class="lbl">Junk</div></div>
+    <div class="stat-chip"><div class="num" style="color:#10b981">${healthy}</div><div class="lbl">Healthy</div></div>
+    <div class="stat-chip"><div class="num">${avgCal}</div><div class="lbl">Avg kcal/100g</div></div>`;
+}
+
+function renderGrid(){
+  const list=filtered();
+  renderStats(list);
+  const g=document.getElementById('snackGrid');
+  if(!list.length){g.innerHTML='<div class="no-results">😕 No snacks found. Try a different search!</div>';return;}
+  g.innerHTML=list.map(s=>snackCardHTML(s)).join('');
+}
+
+function snackCardHTML(s){
+  const ns=nutriScore(s);
+  const calPerServ=Math.round((s.calories*s.servingSize)/100);
+  return`<div class="snack-card" onclick="openModal('${s.id}')">
+    <div class="${s.type==='junk'?'junk-badge':'healthy-badge'}">${s.type==='junk'?'JUNK':'✓ HEALTHY'}</div>
+    <div class="card-emoji">${s.emoji}</div>
+    <div class="card-top">
+      <div class="card-name">${s.name}</div>
+      <div class="grade-badge grade-${ns.grade}" title="${ns.label}">${ns.grade}</div>
+    </div>
+    <div class="card-brand">${s.brand}</div>
+    <div class="card-macros">
+      <div class="macro-tag">🔥 <span>${s.calories}</span> kcal</div>
+      <div class="macro-tag">💪 <span>${s.protein}g</span> protein</div>
+      <div class="macro-tag">🍽️ <span>${calPerServ}</span> kcal/serving</div>
+    </div>
+    <div class="card-desc">${s.description}</div>
+    <div class="card-actions">
+      <button class="btn btn-primary" onclick="event.stopPropagation();openModal('${s.id}')">View Details</button>
+      ${s.type==='junk'?`<button class="btn btn-outline" onclick="event.stopPropagation();openModal('${s.id}','swaps')">🔄 Swap</button>`:''}
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════
+function openModal(id,tab='nutrition'){
+  currentSnack=SNACKS.find(s=>s.id===id);
+  if(!currentSnack)return;
+  document.getElementById('modalTitle').textContent=`${currentSnack.emoji} ${currentSnack.name}`;
+  document.getElementById('modalOverlay').classList.add('open');
+  renderNutritionTab();renderSwapsTab();renderCompareTab();renderExerciseTab();
+  switchTab(tab,document.querySelector(`.modal-tab[onclick*="${tab}"]`));
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+  if(chartInst){chartInst.destroy();chartInst=null;}
+}
+
+function closeModalOnBg(e){if(e.target===document.getElementById('modalOverlay'))closeModal();}
+
+function switchTab(name,btn){
+  activeTab=name;
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.modal-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(name==='nutrition')buildRadarChart();
+}
+
+function renderNutritionTab(){
+  const s=currentSnack;const ns=nutriScore(s);
+  const calPerServ=Math.round((s.calories*s.servingSize)/100);
+  document.getElementById('tab-nutrition').innerHTML=`
+    <div class="grade-info">
+      <div class="grade-big grade-${ns.grade}" style="background:${ns.bg};color:${ns.color}">${ns.grade}</div>
+      <div class="grade-text"><h3>Grade ${ns.grade} – ${ns.label}</h3><p>Nutri-Score: ${ns.score} | Serving: ${s.servingSize}g | ${calPerServ} kcal/serving</p></div>
+    </div>
+    <div class="nut-grid">
+      <div class="nut-cell"><div class="nut-val">${s.calories}</div><div class="nut-unit">kcal</div><div class="nut-label">Energy/100g</div></div>
+      <div class="nut-cell"><div class="nut-val">${s.totalFat}g</div><div class="nut-unit">fat</div><div class="nut-label">Total Fat</div></div>
+      <div class="nut-cell"><div class="nut-val" style="color:#f97316">${s.saturatedFat}g</div><div class="nut-unit">sat fat</div><div class="nut-label">Saturated Fat</div></div>
+      <div class="nut-cell"><div class="nut-val">${s.carbs}g</div><div class="nut-unit">carbs</div><div class="nut-label">Carbohydrates</div></div>
+      <div class="nut-cell"><div class="nut-val" style="color:#ef4444">${s.sugar}g</div><div class="nut-unit">sugar</div><div class="nut-label">Free Sugars</div></div>
+      <div class="nut-cell"><div class="nut-val" style="color:#10b981">${s.protein}g</div><div class="nut-unit">protein</div><div class="nut-label">Protein</div></div>
+      <div class="nut-cell"><div class="nut-val" style="color:#10b981">${s.fiber}g</div><div class="nut-unit">fiber</div><div class="nut-label">Dietary Fiber</div></div>
+      <div class="nut-cell"><div class="nut-val" style="color:#f59e0b">${s.sodium}mg</div><div class="nut-unit">sodium</div><div class="nut-label">Sodium</div></div>
+    </div>
+    <div class="chart-wrap"><canvas id="radarChart" width="300" height="300"></canvas></div>`;
+}
+
+function buildRadarChart(){
+  if(!currentSnack)return;
+  const ctx=document.getElementById('radarChart');
+  if(!ctx)return;
+  if(chartInst){chartInst.destroy();chartInst=null;}
+  const s=currentSnack;
+  const ns=nutriScore(s);
+  chartInst=new Chart(ctx,{
+    type:'radar',
+    data:{
+      labels:['Calories','Protein','Fiber','Fat','Sugar','Sodium'],
+      datasets:[{
+        label:s.name,
+        data:[
+          Math.min(s.calories/6,100),
+          Math.min(s.protein*5,100),
+          Math.min(s.fiber*8,100),
+          Math.min(s.totalFat*2.5,100),
+          Math.min(s.sugar*3,100),
+          Math.min(s.sodium/10,100)
+        ],
+        borderColor:ns.color,
+        backgroundColor:ns.bg,
+        pointBackgroundColor:ns.color,
+        borderWidth:2
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+      scales:{r:{beginAtZero:true,max:100,ticks:{color:'#475569',font:{size:10}},
+        pointLabels:{color:'#94a3b8',font:{size:11}},
+        grid:{color:'rgba(255,255,255,.08)'},angleLines:{color:'rgba(255,255,255,.08)'}}}}
+  });
+}
+
+function renderSwapsTab(){
+  const s=currentSnack;
+  if(s.type==='healthy'){
+    document.getElementById('tab-swaps').innerHTML='<div class="empty-state"><div class="big-icon">✅</div><p>This is already a healthy snack! Great choice.</p></div>';
+    return;
+  }
+  const swaps=getSwaps(s);
+  document.getElementById('tab-swaps').innerHTML=`
+    <p style="color:var(--text2);margin-bottom:1rem;font-size:.9rem;">💡 Healthier alternatives that satisfy the same craving:</p>
+    <div class="swap-grid">${swaps.map(sw=>{
+      const sNS=nutriScore(sw);
+      const sv=getSavings(s,sw);
+      return`<div class="swap-card">
+        <div class="swap-emoji">${sw.emoji}</div>
+        <div class="swap-info">
+          <div class="swap-name">${sw.name} <span class="grade-badge grade-${sNS.grade}" style="font-size:.75rem;width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;">${sNS.grade}</span></div>
+          <div class="swap-cal">${sw.calories} kcal/100g · ${sw.protein}g protein · ${sw.fiber}g fiber</div>
+          ${sv.caloriesSaved>0?`<div style="font-size:.78rem;color:#10b981;margin-top:.3rem;">✅ Save ${sv.caloriesSaved} kcal · +${sv.proteinGain}g protein</div>`:''}
+        </div>
+        <button class="swap-action-btn" onclick="logSwap('${s.id}','${sw.id}')">I Swapped! 🎉</button>
+      </div>`;
+    }).join('')}</div>`;
+}
+
+function renderCompareTab(){
+  const s=currentSnack;
+  const swaps=getSwaps(s);
+  if(!swaps.length||s.type==='healthy'){
+    document.getElementById('tab-compare').innerHTML='<div class="empty-state"><div class="big-icon">⚖️</div><p>Select a junk snack to see comparison.</p></div>';
+    return;
+  }
+  const sw=swaps[0];
+  const sv=getSavings(s,sw);
+  const oNS=nutriScore(s);const sNS=nutriScore(sw);
+  const rows=[
+    ['Calories/100g',s.calories+' kcal',sw.calories+' kcal'],
+    ['Total Fat',s.totalFat+'g',sw.totalFat+'g'],
+    ['Saturated Fat',s.saturatedFat+'g',sw.saturatedFat+'g'],
+    ['Sugar',s.sugar+'g',sw.sugar+'g'],
+    ['Protein',s.protein+'g',sw.protein+'g'],
+    ['Fiber',s.fiber+'g',sw.fiber+'g'],
+    ['Sodium',s.sodium+'mg',sw.sodium+'mg'],
+    ['Grade',`Grade ${oNS.grade}`,`Grade ${sNS.grade}`]
+  ];
+  document.getElementById('tab-compare').innerHTML=`
+    <div class="savings-banner">
+      <h3>🎯 Swap: ${s.name} → ${sw.name}</h3>
+      <div class="savings-tags">
+        ${sv.caloriesSaved>0?`<span class="stag">🔥 ${sv.caloriesSaved} kcal saved</span>`:''}
+        ${sv.proteinGain>0?`<span class="stag">💪 +${sv.proteinGain}g protein</span>`:''}
+        ${sv.fiberGain>0?`<span class="stag">🌿 +${sv.fiberGain}g fiber</span>`:''}
+        ${sv.sodiumRed>0?`<span class="stag">🧂 -${sv.sodiumRed}mg sodium</span>`:''}
+        ${sv.sugarRed>0?`<span class="stag">🍬 -${sv.sugarRed}g sugar</span>`:''}
+        <span class="stag">📊 ${oNS.grade} → ${sNS.grade}</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;padding:.5rem 0;border-bottom:1px solid var(--border);margin-bottom:.5rem;">
+      <div style="text-align:right;font-weight:700;color:#ef4444">${s.emoji} ${s.name}</div>
+      <div style="text-align:center;color:var(--text3);padding:0 1rem;font-size:.8rem;">vs</div>
+      <div style="font-weight:700;color:#10b981">${sw.emoji} ${sw.name}</div>
+    </div>
+    ${rows.map(r=>`<div class="compare-row">
+      <div class="cmp-left">${r[1]}</div>
+      <div class="cmp-label">${r[0]}</div>
+      <div class="cmp-right">${r[2]}</div>
+    </div>`).join('')}`;
+}
+
+function renderExerciseTab(){
+  const s=currentSnack;
+  const exs=exerciseCalc(s);
+  const calPerServ=Math.round((s.calories*s.servingSize)/100);
+  document.getElementById('tab-exercise').innerHTML=`
+    <p style="color:var(--text2);margin-bottom:1.2rem;font-size:.9rem;">🏋️ Burn off <strong style="color:var(--accent)">${calPerServ} kcal</strong> (1 serving of ${s.name}) with these activities:</p>
+    <div class="ex-grid">
+      ${exs.map(e=>`<div class="ex-card">
+        <div class="ex-emoji">${e.emoji}</div>
+        <div class="ex-time">${e.minutes} min</div>
+        <div class="ex-name">${e.name}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// TRACKER
+// ═══════════════════════════════════════════════
+function logSwap(origId,swapId){
+  const orig=SNACKS.find(s=>s.id===origId);
+  const sw=SNACKS.find(s=>s.id===swapId);
+  if(!orig||!sw)return;
+  const sv=getSavings(orig,sw);
+  const entry={id:Date.now(),date:new Date().toLocaleDateString('en-IN'),origName:orig.name,swapName:sw.name,origEmoji:orig.emoji,swapEmoji:sw.emoji,...sv};
+  const all=getLog();all.unshift(entry);saveLog(all);
+  showToast(`✅ Swap logged! You saved ${sv.caloriesSaved} kcal`,'success');
+  closeModal();
+  nav('tracker');
+}
+
+function getLog(){try{return JSON.parse(localStorage.getItem('nl_swaps')||'[]');}catch{return[];}}
+function saveLog(d){localStorage.setItem('nl_swaps',JSON.stringify(d));}
+
+function renderTracker(){
+  const all=getLog();
+  const totCal=all.reduce((s,x)=>s+(x.caloriesSaved||0),0);
+  const totSugar=+all.reduce((s,x)=>s+(x.sugarRed||0),0).toFixed(1);
+  const totSodium=Math.round(all.reduce((s,x)=>s+(x.sodiumRed||0),0));
+  const totProt=+all.reduce((s,x)=>s+(x.proteinGain||0),0).toFixed(1);
+
+  document.getElementById('trackerStats').innerHTML=`
+    <div class="tracker-card"><div class="big">${all.length}</div><div class="lbl">Total Swaps Made</div></div>
+    <div class="tracker-card green"><div class="big">${totCal}</div><div class="lbl">kcal Saved Total</div></div>
+    <div class="tracker-card amber"><div class="big">${totSugar}g</div><div class="lbl">Sugar Reduced</div></div>
+    <div class="tracker-card red"><div class="big">${totSodium}mg</div><div class="lbl">Sodium Reduced</div></div>
+    <div class="tracker-card"><div class="big">${totProt}g</div><div class="lbl">Protein Gained</div></div>`;
+
+  const log=document.getElementById('trackerLog');
+  if(!all.length){
+    log.innerHTML='<div class="empty-state"><div class="big-icon">🔄</div><p>No swaps logged yet!<br>Search a junk snack and click <strong>"I Swapped!"</strong></p></div>';
+    return;
+  }
+  log.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><h3 style="font-size:1rem;">Swap History</h3><button class="btn btn-danger" onclick="clearLog()">Clear All</button></div>`+
+    all.map(e=>`<div class="log-entry">
+      <div class="log-arrow">${e.origEmoji}→${e.swapEmoji}</div>
+      <div class="log-info">
+        <div class="log-names">${e.origName} → ${e.swapName}</div>
+        <div class="log-meta">${e.date} · <span class="log-kcal">-${e.caloriesSaved} kcal</span> · +${e.proteinGain}g protein</div>
+      </div>
+      <button class="log-del" onclick="delEntry(${e.id})">🗑️</button>
+    </div>`).join('');
+}
+
+function clearLog(){if(confirm('Clear all swap logs?')){saveLog([]);renderTracker();showToast('All logs cleared','info');}}
+function delEntry(id){saveLog(getLog().filter(x=>x.id!==id));renderTracker();}
+
+// ═══════════════════════════════════════════════
+// HACKS
+// ═══════════════════════════════════════════════
+function renderHacks(){
+  document.getElementById('hacksGrid').innerHTML=HOSTEL_HACKS.map(h=>`
+    <div class="hack-card">
+      <div class="hack-top">
+        <div class="hack-emoji">${h.emoji}</div>
+        <div><div style="font-weight:700;font-size:1rem">${h.name}</div><div style="font-size:.8rem;color:var(--text2)">${h.calories} kcal</div></div>
+      </div>
+      <div class="hack-meta">
+        <span class="hack-tag">⏱️ ${h.time}</span>
+        <span class="hack-tag">🛠️ ${h.prep}</span>
+        <span class="hack-tag">💰 ${h.cost}</span>
+      </div>
+      <div style="font-size:.85rem;color:var(--text2)">${h.description}</div>
+      <div class="hack-ing"><strong style="font-size:.8rem">Ingredients:</strong>
+        <ul>${h.ingredients.map(i=>`<li>${i}</li>`).join('')}</ul>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// SUGAR VISUALIZER
+// ═══════════════════════════════════════════════
+function renderSugar(){
+  const sugary=SNACKS.filter(s=>s.sugar>3||s.category==='beverages');
+  document.getElementById('sugarGrid').innerHTML=sugary.map(s=>{
+    const totalSugarG=+(s.sugar*s.servingSize/100).toFixed(1);
+    const cubes=Math.ceil(totalSugarG/4);
+    const display=Math.min(cubes,20);
+    const cubeHTML='🟫'.repeat(display)+(cubes>20?`<span style="color:var(--text2);font-size:.8rem"> +${cubes-20} more</span>`:'');
+    return`<div class="sugar-card">
+      <div class="sugar-top">
+        <div style="font-size:2rem">${s.emoji}</div>
+        <div><div style="font-weight:700">${s.name}</div><div style="font-size:.78rem;color:var(--text2)">${s.brand}</div></div>
+      </div>
+      <div class="sugar-info-text">Per ${s.servingSize}g serving: <strong style="color:#ef4444">${totalSugarG}g sugar</strong></div>
+      <div style="font-size:.8rem;color:var(--text2);margin-bottom:.5rem">${cubes} sugar cube${cubes!==1?'s':''} 🟫 (1 cube = 4g)</div>
+      <div class="sugar-cubes">${cubeHTML}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════
+function showToast(msg,type='info'){
+  const c=document.getElementById('toastContainer');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;t.textContent=msg;c.appendChild(t);
+  setTimeout(()=>t.classList.add('show'),10);
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3500);
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+initFilters();
+renderGrid();
+</script>
+</body>
+</html>
